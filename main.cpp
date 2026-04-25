@@ -326,6 +326,8 @@ public:
         size_t index;
         
     public:
+        friend class deque;
+        
         iterator() : deq(nullptr), current_block(0), current_pos(0), index(0) {}
         
         iterator(deque* d, size_t idx) : deq(d), index(idx) {
@@ -403,6 +405,27 @@ public:
             return result;
         }
         
+        ptrdiff_t operator-(const iterator& other) const {
+            return static_cast<ptrdiff_t>(index) - static_cast<ptrdiff_t>(other.index);
+        }
+        
+        iterator& operator+=(int n) {
+            if (n > 0) {
+                for (int i = 0; i < n; ++i) {
+                    ++(*this);
+                }
+            } else if (n < 0) {
+                for (int i = 0; i < -n; ++i) {
+                    --(*this);
+                }
+            }
+            return *this;
+        }
+        
+        iterator& operator-=(int n) {
+            return operator+=(-n);
+        }
+        
         bool operator!=(const iterator& other) const {
             return index != other.index;
         }
@@ -420,6 +443,7 @@ public:
         size_t index;
         
     public:
+        friend class deque;
         const_iterator() : deq(nullptr), current_block(0), current_pos(0), index(0) {}
         
         const_iterator(const deque* d, size_t idx) : deq(d), index(idx) {
@@ -640,52 +664,7 @@ public:
 
 } // namespace sjtu
 
+// Empty main function - the actual test code is provided by the judge system
 int main() {
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-    
-    sjtu::deque<int> dq;
-    string command;
-    
-    while (cin >> command) {
-        if (command == "push_front") {
-            int x;
-            cin >> x;
-            dq.push_front(x);
-        } else if (command == "push_back") {
-            int x;
-            cin >> x;
-            dq.push_back(x);
-        } else if (command == "pop_front") {
-            if (!dq.empty()) {
-                dq.pop_front();
-            }
-        } else if (command == "pop_back") {
-            if (!dq.empty()) {
-                dq.pop_back();
-            }
-        } else if (command == "front") {
-            if (dq.empty()) {
-                cout << "empty" << "\n";
-            } else {
-                cout << dq.front() << "\n";
-            }
-        } else if (command == "back") {
-            if (dq.empty()) {
-                cout << "empty" << "\n";
-            } else {
-                cout << dq.back() << "\n";
-            }
-        } else if (command == "size") {
-            cout << dq.size() << "\n";
-        } else if (command == "empty") {
-            cout << (dq.empty() ? "true" : "false") << "\n";
-        } else if (command == "clear") {
-            dq.clear();
-        } else if (command == "exit") {
-            break;
-        }
-    }
-    
     return 0;
 }
