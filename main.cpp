@@ -3,11 +3,14 @@
 #include <string>
 #include <stdexcept>
 #include <algorithm>
+#include <deque>
 
 using namespace std;
 
+namespace sjtu {
+
 template <typename T>
-class Deque {
+class deque {
 private:
     T** map;           // Array of pointers to blocks
     size_t map_size;   // Size of the map
@@ -117,21 +120,21 @@ private:
     }
     
 public:
-    Deque() : map(nullptr), map_size(0), start_block(0), start_pos(0), 
+    deque() : map(nullptr), map_size(0), start_block(0), start_pos(0), 
               end_block(0), end_pos(0), _size(0) {
         allocate_map(8);
         start_block = end_block = map_size / 2;
         start_pos = end_pos = BLOCK_SIZE / 2;
     }
     
-    ~Deque() {
+    ~deque() {
         clear();
         if (map) {
             deallocate_all();
         }
     }
     
-    Deque(const Deque& other) : map(nullptr), map_size(0), start_block(0), start_pos(0),
+    deque(const deque& other) : map(nullptr), map_size(0), start_block(0), start_pos(0),
                                 end_block(0), end_pos(0), _size(0) {
         allocate_map(other.map_size);
         start_block = other.start_block;
@@ -151,7 +154,7 @@ public:
         }
     }
     
-    Deque& operator=(const Deque& other) {
+    deque& operator=(const deque& other) {
         if (this != &other) {
             clear();
             if (map) {
@@ -314,6 +317,320 @@ public:
         return _size;
     }
     
+    // Iterator class for basic iteration
+    class iterator {
+    private:
+        deque* deq;
+        size_t current_block;
+        size_t current_pos;
+        size_t index;
+        
+    public:
+        iterator() : deq(nullptr), current_block(0), current_pos(0), index(0) {}
+        
+        iterator(deque* d, size_t idx) : deq(d), index(idx) {
+            if (deq && deq->_size > 0) {
+                if (idx == 0) {
+                    current_block = deq->start_block;
+                    current_pos = deq->start_pos;
+                } else if (idx >= deq->_size) {
+                    current_block = deq->end_block;
+                    current_pos = deq->end_pos + 1;
+                } else {
+                    // Calculate position from index
+                    size_t total_pos = deq->start_pos + idx;
+                    current_block = deq->start_block + total_pos / BLOCK_SIZE;
+                    current_pos = total_pos % BLOCK_SIZE;
+                }
+            }
+        }
+        
+        T& operator*() {
+            return deq->map[current_block][current_pos];
+        }
+        
+        T* operator->() {
+            return &deq->map[current_block][current_pos];
+        }
+        
+        iterator& operator++() {
+            if (current_pos == BLOCK_SIZE - 1) {
+                current_block++;
+                current_pos = 0;
+            } else {
+                current_pos++;
+            }
+            index++;
+            return *this;
+        }
+        
+        iterator operator++(int) {
+            iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+        
+        iterator& operator--() {
+            if (current_pos == 0) {
+                current_block--;
+                current_pos = BLOCK_SIZE - 1;
+            } else {
+                current_pos--;
+            }
+            index--;
+            return *this;
+        }
+        
+        iterator operator--(int) {
+            iterator tmp = *this;
+            --(*this);
+            return tmp;
+        }
+        
+        iterator operator+(int n) const {
+            iterator result = *this;
+            for (int i = 0; i < n; ++i) {
+                ++result;
+            }
+            return result;
+        }
+        
+        iterator operator-(int n) const {
+            iterator result = *this;
+            for (int i = 0; i < n; ++i) {
+                --result;
+            }
+            return result;
+        }
+        
+        bool operator!=(const iterator& other) const {
+            return index != other.index;
+        }
+        
+        bool operator==(const iterator& other) const {
+            return index == other.index;
+        }
+    };
+    
+    class const_iterator {
+    private:
+        const deque* deq;
+        size_t current_block;
+        size_t current_pos;
+        size_t index;
+        
+    public:
+        const_iterator() : deq(nullptr), current_block(0), current_pos(0), index(0) {}
+        
+        const_iterator(const deque* d, size_t idx) : deq(d), index(idx) {
+            if (deq && deq->_size > 0) {
+                if (idx == 0) {
+                    current_block = deq->start_block;
+                    current_pos = deq->start_pos;
+                } else if (idx >= deq->_size) {
+                    current_block = deq->end_block;
+                    current_pos = deq->end_pos + 1;
+                } else {
+                    // Calculate position from index
+                    size_t total_pos = deq->start_pos + idx;
+                    current_block = deq->start_block + total_pos / BLOCK_SIZE;
+                    current_pos = total_pos % BLOCK_SIZE;
+                }
+            }
+        }
+        
+        const T& operator*() const {
+            return deq->map[current_block][current_pos];
+        }
+        
+        const T* operator->() const {
+            return &deq->map[current_block][current_pos];
+        }
+        
+        const_iterator& operator++() {
+            if (current_pos == BLOCK_SIZE - 1) {
+                current_block++;
+                current_pos = 0;
+            } else {
+                current_pos++;
+            }
+            index++;
+            return *this;
+        }
+        
+        const_iterator operator++(int) {
+            const_iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+        
+        const_iterator& operator--() {
+            if (current_pos == 0) {
+                current_block--;
+                current_pos = BLOCK_SIZE - 1;
+            } else {
+                current_pos--;
+            }
+            index--;
+            return *this;
+        }
+        
+        const_iterator operator--(int) {
+            const_iterator tmp = *this;
+            --(*this);
+            return tmp;
+        }
+        
+        bool operator!=(const const_iterator& other) const {
+            return index != other.index;
+        }
+        
+        bool operator==(const const_iterator& other) const {
+            return index == other.index;
+        }
+    };
+    
+    // Element access
+    T& operator[](size_t pos) {
+        if (pos >= _size) {
+            throw out_of_range("deque index out of range");
+        }
+        
+        size_t total_pos = start_pos + pos;
+        size_t block = start_block + total_pos / BLOCK_SIZE;
+        size_t block_pos = total_pos % BLOCK_SIZE;
+        
+        return map[block][block_pos];
+    }
+    
+    const T& operator[](size_t pos) const {
+        if (pos >= _size) {
+            throw out_of_range("deque index out of range");
+        }
+        
+        size_t total_pos = start_pos + pos;
+        size_t block = start_block + total_pos / BLOCK_SIZE;
+        size_t block_pos = total_pos % BLOCK_SIZE;
+        
+        return map[block][block_pos];
+    }
+    
+    T& at(size_t pos) {
+        return operator[](pos);
+    }
+    
+    const T& at(size_t pos) const {
+        return operator[](pos);
+    }
+    
+    // Iterators
+    iterator begin() {
+        return iterator(this, 0);
+    }
+    
+    iterator end() {
+        return iterator(this, _size);
+    }
+    
+    const_iterator begin() const {
+        return const_iterator(this, 0);
+    }
+    
+    const_iterator end() const {
+        return const_iterator(this, _size);
+    }
+    
+    const_iterator cbegin() const {
+        return const_iterator(this, 0);
+    }
+    
+    const_iterator cend() const {
+        return const_iterator(this, _size);
+    }
+    
+    // Modifiers
+    iterator insert(iterator pos, const T& value) {
+        size_t index = pos.index;
+        if (index > _size) {
+            throw out_of_range("insert position out of range");
+        }
+        
+        if (index == _size) {
+            push_back(value);
+            return end() - 1;
+        }
+        
+        if (index == 0) {
+            push_front(value);
+            return begin();
+        }
+        
+        // For simplicity, move elements after position and insert
+        deque temp;
+        for (size_t i = 0; i < index; ++i) {
+            temp.push_back(operator[](i));
+        }
+        temp.push_back(value);
+        for (size_t i = index; i < _size; ++i) {
+            temp.push_back(operator[](i));
+        }
+        
+        *this = temp;
+        return begin() + index;
+    }
+    
+    iterator erase(iterator pos) {
+        size_t index = pos.index;
+        if (index >= _size) {
+            throw out_of_range("erase position out of range");
+        }
+        
+        deque temp;
+        for (size_t i = 0; i < index; ++i) {
+            temp.push_back(operator[](i));
+        }
+        for (size_t i = index + 1; i < _size; ++i) {
+            temp.push_back(operator[](i));
+        }
+        
+        *this = temp;
+        return begin() + index;
+    }
+    
+    void resize(size_t new_size) {
+        if (new_size < _size) {
+            while (_size > new_size) {
+                pop_back();
+            }
+        } else if (new_size > _size) {
+            while (_size < new_size) {
+                push_back(T());
+            }
+        }
+    }
+    
+    void resize(size_t new_size, const T& value) {
+        if (new_size < _size) {
+            while (_size > new_size) {
+                pop_back();
+            }
+        } else if (new_size > _size) {
+            while (_size < new_size) {
+                push_back(value);
+            }
+        }
+    }
+    
+    void swap(deque& other) {
+        std::swap(map, other.map);
+        std::swap(map_size, other.map_size);
+        std::swap(start_block, other.start_block);
+        std::swap(start_pos, other.start_pos);
+        std::swap(end_block, other.end_block);
+        std::swap(end_pos, other.end_pos);
+        std::swap(_size, other._size);
+    }
+    
     void clear() {
         while (!empty()) {
             pop_front();
@@ -321,11 +638,13 @@ public:
     }
 };
 
+} // namespace sjtu
+
 int main() {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
     
-    Deque<int> dq;
+    sjtu::deque<int> dq;
     string command;
     
     while (cin >> command) {
